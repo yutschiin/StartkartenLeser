@@ -13,8 +13,10 @@ This repository provides source code; no prebuilt desktop installer is published
 
 ## Features
 
-- Create and reopen Wettkämpfe with a number, distance, stroke (Freistil,
-  Brust, Rücken, Schmetterling or Lagen) and category (Weiblich or Männlich).
+- Create and reopen Wettkämpfe with a number, distance, configured or one-off
+  Lage, and category (Weiblich, Männlich or Mixed). The default config includes
+  Freistil, Brust, Rücken, Schmetterling, Lagen, Flossenschwimmen mit Brett and
+  Freistil mit Flossen.
 - Capture a card with a camera or choose a PNG/JPEG file.
 - Review the source image beside editable card fields. Local handwriting
   recognition supplies suggestions; warnings flag differences from event
@@ -28,8 +30,8 @@ This repository provides source code; no prebuilt desktop installer is published
   [CSV format](docs/csv-format.md).
 
 OCR is not a guarantee of accuracy. The app does not provide manual corner
-adjustment, editable Wettkampf metadata, mixed/open categories or a certified
-import format for a particular meet-management program.
+adjustment, post-creation editing of Wettkampf metadata, open categories or a
+certified import format for a particular meet-management program.
 
 ## Requirements and support
 
@@ -72,6 +74,26 @@ assets, and checks image/OCR imports. The app prints a local URL and opens it in
 your browser. Keep the terminal open; Ctrl+C stops the server. Close the browser
 tab to release the camera. If automatic opening fails, open the complete URL
 printed in the terminal.
+
+## Application configuration
+
+The app loads its general settings—including Lage choices and OCR recognition
+policy—from `config.json` in the application data directory:
+`$XDG_DATA_HOME/startkartenleser` or `~/.local/share/startkartenleser` (or the
+directory selected with `--data-dir`). On first launch, the default file is
+copied there. Edit this JSON file before starting
+the app to change the available Lagen, their display labels and OCR synonyms,
+or the recognition thresholds. Changes are loaded at startup, so restart the app
+after editing. To configure a fresh installation before its first run, copy the
+bundled starting configuration to that path and edit it first. The bundled file
+is [`config.json`](src/startkartenleser/assets/config.json).
+
+Each Lage has a stable lowercase `value`, a `label`, and a `synonyms` list.
+Those synonyms are also used by the recognition correction policy. The
+`recognition_policy` section controls fuzzy edit distance and the minimum birth
+year. In Wettkampf creation, users can also type a one-off Lage without changing
+the config file; reusable OCR synonyms require adding that Lage to the config.
+Invalid or ambiguous configuration prevents the server from starting.
 
 Create a Wettkampf, capture or select a card image, review and edit its values,
 then approve it before continuing. Draft saving is not approval. CSV export is

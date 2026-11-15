@@ -2,9 +2,11 @@
 
 ## Product rules
 
-- A Wettkampf has a positive number and distance in metres, one of Freistil,
-  Brust, Rücken, Schmetterling or Lagen, and a Weiblich or Männlich category.
-  This metadata is set at creation and cannot currently be edited.
+- A Wettkampf has a positive number and distance in metres, a Lage selected from
+  the config or entered for that event, and a Weiblich, Männlich or Mixed group.
+  Metadata is set at creation and cannot currently be edited afterward.
+- Mixed is an event group, not a participant mark: individual card marks remain
+  female/male, and reference comparison does not assume one of them for Mixed.
 - A card belongs to one Wettkampf. Older unclassified records keep their
   existing data until the user explicitly moves cards into a new Wettkampf;
   metadata is never inferred from OCR.
@@ -29,11 +31,11 @@ truth; unsafe alignment is not used to invent field crops.
 
 ## Limits
 
-The initial categories are female and male. User-editable event metadata, custom
-card templates, manual corner adjustment, mixed/open categories, hosted
-recognition, synchronization, and certified compatibility with a specific
-external meet-management program are outside the current product scope. OCR
-accuracy on the included development fixtures is not a product accuracy claim.
+User-editable event metadata after creation, custom card templates, manual corner
+adjustment, open categories, hosted recognition, synchronization, and certified
+compatibility with a specific external meet-management program are outside the
+current product scope. OCR accuracy on the included development fixtures is not
+a product accuracy claim.
 
 See the [README](../README.md) for user setup and operation,
 [architecture](architecture.md) for technical boundaries, and

@@ -45,12 +45,27 @@ The production data directory is `$XDG_DATA_HOME/startkartenleser` or
 `~/.local/share/startkartenleser`; `--data-dir` selects another directory. One
 application process may hold a data directory at a time.
 
-SQLite schema v3 stores sessions, cards, event metadata, fields, checkbox marks,
+SQLite schema v4 stores sessions, cards, event metadata, fields, checkbox marks,
 OCR evidence, capture-request IDs, reference comparisons, and pending image
-deletions. The UI calls classified sessions **Wettkämpfe**; internal `Session`
-names remain for compatibility. New capture and export require complete event
-metadata. Old sessions are left unclassified rather than inferred from card
-OCR; users can explicitly move their cards into a new Wettkampf.
+deletions. It also retains an unused `application_settings` table for
+compatibility with an earlier build; current configuration is read from JSON,
+not stored there. The UI calls classified sessions **Wettkämpfe**; internal
+`Session` names remain for compatibility. New capture and export require
+complete event metadata. Old sessions are left unclassified rather than
+inferred from card OCR; users can explicitly move their cards into a new
+Wettkampf.
+
+Configured Lagen, labels, synonyms, and recognition policy are read at startup
+from `config.json` in the application data directory. On first launch, the
+packaged default file is copied there; an existing `recognition-policy.json` is
+renamed to `config.json` for compatibility. The Python workflow validates
+configured options while also allowing a bounded one-off Lage in a Wettkampf.
+OCR uses configured synonyms as correction aliases (see
+[ADR-0008](adr/ADR-0008-configurable-lagen.md)).
+
+Wettkampf groups are Weiblich, Männlich, or Mixed. Mixed does not imply a
+participant checkbox state: both female/male marks remain unknown until read or
+reviewed, and reference comparison does not report a gender mismatch for Mixed.
 
 Opening a schema-v1 database creates a SQLite backup beside it named
 `startkartenleser.before-v2.sqlite3` before migration. Migration is transactional

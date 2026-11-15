@@ -642,10 +642,9 @@ class BrowserWorkflow:
         stream = io.StringIO(newline="")
         writer = csv.writer(stream, delimiter=";", lineterminator="\r\n")
         writer.writerow((
-            "csv_version", "wettkampf_id", "wettkampf_number", "distance_m",
-            "stroke_key", "gender_key", "card_id", "sequence", "name", "first_name",
-            "year_text", "heat", "heat_text", "lane", "lane_text", "time_ms",
-            "time_text", "timekeeper", "female_mark", "male_mark",
+            "csv_version", "card_id", "sequence", "wk_number", "name", "first_name",
+            "year_text", "female_mark", "male_mark", "course", "position", "heat",
+            "heat_text", "lane", "lane_text", "time_ms", "time_text", "timekeeper",
         ))
         for card in cards:
             fields = self.repositories.get_field_values(card.id)
@@ -660,12 +659,13 @@ class BrowserWorkflow:
 
             time = parse_time_milliseconds(value("time"))
             writer.writerow(tuple(_csv_safe(item) for item in (
-                "1", session.id, session.number, session.distance_m, session.stroke,
-                session.gender, card.id, card.sequence, value("name"), value("first_name"),
-                value("year"), validate_positive_integer(value("heat")).value, value("heat"),
+                "2", card.id, card.sequence,
+                validate_positive_integer(value("wk_number")).value, value("name"),
+                value("first_name"), value("year"), mark("female"), mark("male"),
+                value("course"), value("position"),
+                validate_positive_integer(value("heat")).value, value("heat"),
                 validate_positive_integer(value("lane")).value, value("lane"),
                 time.milliseconds, value("time"), value("timekeeper"),
-                mark("female"), mark("male"),
             )))
         return ("\ufeff" + stream.getvalue()).encode("utf-8")
 

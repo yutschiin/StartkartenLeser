@@ -36,6 +36,9 @@ from startkartenleser.domain.schema import (
 from startkartenleser.domain.validation import (
     parse_time_milliseconds, validate_positive_integer, validate_year,
 )
+from startkartenleser.infrastructure.correction_policy import (
+    DEFAULT_STROKE_OPTIONS, StrokeOption,
+)
 from startkartenleser.infrastructure.image_pipeline import card_region_overlays
 from startkartenleser.infrastructure.image_store import ManagedImageStore
 from startkartenleser.infrastructure.sqlite_repositories import CleanupPendingError, SqliteRepositories
@@ -43,8 +46,9 @@ from startkartenleser.localization import TextCatalog
 
 
 LOGGER = logging.getLogger(__name__)
-STROKES = ("freistil", "brust", "ruecken", "schmetterling", "lagen")
+STROKES = tuple(option.value for option in DEFAULT_STROKE_OPTIONS)
 GENDERS = ("female", "male")
+EVENT_GENDERS = (*GENDERS, "mixed")
 TEXT_FIELDS = {field.key for field in FIELDS if field.kind is not FieldKind.CHECKBOX}
 MARK_FIELDS = {"female", "male"}
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
@@ -103,11 +107,13 @@ class BrowserWorkflow:
     def __init__(
         self, repositories: SqliteRepositories, images: ManagedImageStore,
         use_cases: StartkartenUseCases, text: TextCatalog,
+        strokes: tuple[StrokeOption, ...] = DEFAULT_STROKE_OPTIONS,
     ) -> None:
         self.repositories = repositories
         self.images = images
         self.use_cases = use_cases
         self.text = text
+        self.strokes = strokes
         self.lock = RLock()
         self.recognition_lock = Lock()
         self.cancellation = Event()
@@ -124,20 +130,48 @@ class BrowserWorkflow:
 
     def session_data(self, session: Session, *, card_count: int | None = None) -> dict:
         data = asdict(session)
+        data["stroke_label"] = self.stroke_label(session.stroke)
         data["card_count"] = (
             len(self.repositories.list_cards(session.id)) if card_count is None else card_count
         )
         return data
 
+    def stroke_label(self, stroke: str | None) -> str:
+        if stroke is None:
+            return ""
+        configured = next(
+            (option.label for option in self.strokes if option.value == stroke), None,
+        )
+        if configured is not None:
+            return configured
+        label = self.text.messages.get(f"stroke.{stroke}", stroke)
+        return label if isinstance(label, str) else stroke
+
     def create_session(self, payload: dict) -> dict:
         number = integer(payload, "number", minimum=1)
         distance = integer(payload, "distance_m", minimum=1)
         stroke, gender = payload.get("stroke"), payload.get("gender")
-        if stroke not in STROKES or gender not in GENDERS:
+        if not isinstance(stroke, str) or gender not in EVENT_GENDERS:
             raise BrowserError(400, "browser.invalid_request")
+        stroke = stroke.strip()
+        if (
+            not stroke
+            or len(stroke) > 80
+            or any(ord(char) < 32 or ord(char) == 127 for char in stroke)
+        ):
+            raise BrowserError(400, "browser.invalid_request")
+        configured = next(
+            (
+                option for option in self.strokes
+                if option.value == stroke or option.label.casefold() == stroke.casefold()
+            ),
+            None,
+        )
+        if configured is not None:
+            stroke = configured.value
         title = self.text.text(
             "wettkampf.title", number=number, distance=distance,
-            stroke=self.text.text(f"stroke.{stroke}"),
+            stroke=self.stroke_label(stroke),
             gender=self.text.text(f"gender.{gender}"),
         )
         created = self.repositories.create_session(Session(
@@ -392,7 +426,7 @@ class BrowserWorkflow:
                 source_region="event_reference",
             ),
             "position": FieldValue(
-                "position", self.text.text(f"stroke.{session.stroke}"),
+                "position", self.stroke_label(session.stroke),
                 FieldProvenance.OCR, FieldReviewStatus.CANDIDATE,
                 raw_transcription=raw.get("position", (None, None))[0],
                 confidence=raw.get("position", (None, None))[1],
@@ -402,7 +436,11 @@ class BrowserWorkflow:
         marks = {
             key: CheckboxValue(
                 key,
-                CheckboxState.CHECKED if key == session.gender else CheckboxState.UNCHECKED,
+                (
+                    CheckboxState.UNKNOWN if session.gender == "mixed"
+                    else CheckboxState.CHECKED if key == session.gender
+                    else CheckboxState.UNCHECKED
+                ),
                 FieldProvenance.OCR,
             )
             for key in GENDERS
@@ -471,7 +509,7 @@ class BrowserWorkflow:
             detected_gender = "male"
 
         expected_course = str(session.distance_m)
-        expected_position = self.text.text(f"stroke.{session.stroke}")
+        expected_position = self.stroke_label(session.stroke)
         expected_gender = self.text.text(f"gender.{session.gender}")
         course_matches = (
             course_value is not None and not ambiguous_course
@@ -481,7 +519,7 @@ class BrowserWorkflow:
             position_value is not None and not ambiguous_position
             and _text_key(position_value) == _text_key(expected_position)
         )
-        gender_matches = detected_gender == session.gender
+        gender_matches = session.gender == "mixed" or detected_gender == session.gender
         warnings = {}
         if layout_version == CARD_LAYOUT_A6_V4 and detected_wk_number != expected_wk_number:
             warnings["wk_number"] = {
@@ -584,11 +622,14 @@ class BrowserWorkflow:
     def export_filename(self, session_id: str) -> str:
         session = self.session(session_id, classified=True)
         gender = self.text.text(f"gender.{session.gender}").lower()
+        stroke = (session.stroke or "lage").lower()
         for umlaut, replacement in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")):
             gender = gender.replace(umlaut, replacement)
+            stroke = stroke.replace(umlaut, replacement)
+        stroke = re.sub(r"[^a-z0-9]+", "-", stroke).strip("-") or "lage"
         return (
             f"wettkampf-{session.number}-{session.distance_m}m-"
-            f"{session.stroke}-{gender}.csv"
+            f"{stroke}-{gender}.csv"
         )
 
     def export(self, session_id: str) -> bytes:

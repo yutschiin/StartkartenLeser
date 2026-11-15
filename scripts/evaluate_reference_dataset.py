@@ -12,7 +12,7 @@ import sys
 from startkartenleser.domain.contracts import AlignmentQuality, CheckboxState
 from startkartenleser.domain.contracts import RecognitionCandidate
 from startkartenleser.domain.postprocessing import POSTPROCESSING_VERSION, correct_candidate
-from startkartenleser.infrastructure.correction_policy import DEFAULT_POLICY_PATH, load_correction_policy
+from startkartenleser.infrastructure.correction_policy import DEFAULT_CONFIG_PATH, load_correction_policy
 from startkartenleser.domain.schema import CROP_VERSION, MODEL_VERSION, SCHEMA_VERSION
 from startkartenleser.evaluation import SCORED_FIELDS, matches as _matches
 from startkartenleser.infrastructure.image_pipeline import load_selected_image
@@ -123,7 +123,7 @@ def _write_field_result(
     )
 
 
-def evaluate(output: Path, policy_path: Path = DEFAULT_POLICY_PATH) -> tuple[list[dict[str, str]], datetime]:
+def evaluate(output: Path, policy_path: Path = DEFAULT_CONFIG_PATH) -> tuple[list[dict[str, str]], datetime]:
     references = _read_references()
     policy = load_correction_policy(policy_path)
     policy_digest = hashlib.sha256(policy_path.read_bytes()).hexdigest()
@@ -254,7 +254,7 @@ def _print_summary(results: list[dict[str, str]], run_at: datetime, output: Path
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=DEFAULT_POLICY_PATH)
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument(
         "--output",
         type=Path,

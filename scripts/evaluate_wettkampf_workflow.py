@@ -29,7 +29,7 @@ from startkartenleser.domain.validation import (
     parse_time_milliseconds, validate_positive_integer, validate_year,
 )
 from startkartenleser.evaluation import SCORED_FIELDS, matches, normalize_stroke
-from startkartenleser.infrastructure.correction_policy import DEFAULT_POLICY_PATH, load_correction_policy
+from startkartenleser.infrastructure.correction_policy import DEFAULT_CONFIG_PATH, load_correction_policy
 from startkartenleser.infrastructure.image_pipeline import ImageInputError, load_selected_image
 from startkartenleser.infrastructure.image_store import ManagedImageStore
 from startkartenleser.infrastructure.paths import AppDataPaths
@@ -245,13 +245,13 @@ def run(
     exports_dir.mkdir()
     evidence_dir.mkdir()
     shutil.copyfile(references, output_dir / "references.csv")
-    shutil.copyfile(DEFAULT_POLICY_PATH, output_dir / "recognition-policy.json")
+    shutil.copyfile(DEFAULT_CONFIG_PATH, output_dir / "config.json")
     photo_hashes = {row["card_no"]: digest(images_dir / row["image_filename"]) for row in rows}
     git_revision, git_dirty = git_metadata()
     write_json(output_dir / "run.json", {
         "started_utc": datetime.now(timezone.utc), "images_dir": images_dir,
         "references": references, "references_sha256": digest(references),
-        "policy_sha256": digest(DEFAULT_POLICY_PATH),
+        "policy_sha256": digest(DEFAULT_CONFIG_PATH),
         "git_revision": git_revision, "git_dirty": git_dirty,
         "runner_sha256": digest(Path(__file__)), "python": platform.python_version(),
         "packages": {name: version(name) for name in (

@@ -23,6 +23,10 @@ from startkartenleser.domain.contracts import (
 )
 from startkartenleser.infrastructure.image_store import ManagedImageStore
 from startkartenleser.infrastructure.image_pipeline import ImageInputError
+from startkartenleser.infrastructure.correction_policy import (
+    DEFAULT_CONFIG_PATH,
+    load_app_configuration,
+)
 from startkartenleser.infrastructure.paths import AppDataPaths
 from startkartenleser.infrastructure.sqlite_repositories import (
     CleanupPendingError,
@@ -149,8 +153,22 @@ def test_interrupted_alignment_and_recognition_recover_to_needs_review(tmp_path)
 def test_schema_migration_is_versioned_and_newer_database_is_rejected(tmp_path) -> None:
     database = tmp_path / "app.sqlite3"
     repo = SqliteRepositories(database)
-    assert repo._connection.execute("PRAGMA user_version").fetchone()[0] == 3
+    assert repo._connection.execute("PRAGMA user_version").fetchone()[0] == 4
     repo.close()
+
+    # Databases created by the earlier feature iteration already have v4 and
+    # the settings table; opening them must not attempt a downgrade or fail.
+    reopened = SqliteRepositories(database)
+    assert reopened._connection.execute("PRAGMA user_version").fetchone()[0] == 4
+    reopened.close()
+
+    version_three = tmp_path / "version-three.sqlite3"
+    previous = SqliteRepositories(version_three)
+    previous._connection.execute("PRAGMA user_version = 3")
+    previous.close()
+    migrated = SqliteRepositories(version_three)
+    assert migrated._connection.execute("PRAGMA user_version").fetchone()[0] == 4
+    migrated.close()
 
     future_database = tmp_path / "future.sqlite3"
     connection = sqlite3.connect(future_database)
@@ -338,3 +356,42 @@ def test_default_data_paths_honor_xdg_and_can_be_created(tmp_path, monkeypatch) 
     assert paths.root == tmp_path / "xdg" / "startkartenleser"
     assert paths.database.parent == paths.root
     assert paths.images.is_dir()
+
+
+def test_missing_config_is_initialized_from_packaged_default(tmp_path) -> None:
+    paths = AppDataPaths(tmp_path / "startkartenleser")
+    paths.ensure()
+
+    config_path = paths.prepare_config(DEFAULT_CONFIG_PATH)
+
+    assert config_path == paths.config
+    assert config_path.read_text(encoding="utf-8") == DEFAULT_CONFIG_PATH.read_text(
+        encoding="utf-8"
+    )
+    assert len(load_app_configuration(config_path).strokes) == 7
+
+
+def test_existing_recognition_policy_is_renamed_to_general_config(tmp_path) -> None:
+    paths = AppDataPaths(tmp_path / "startkartenleser")
+    paths.ensure()
+    old_path = paths.legacy_recognition_policy
+    old_contents = DEFAULT_CONFIG_PATH.read_text(encoding="utf-8")
+    old_path.write_text(old_contents, encoding="utf-8")
+
+    config_path = paths.prepare_config(DEFAULT_CONFIG_PATH)
+
+    assert config_path == paths.config
+    assert config_path.read_text(encoding="utf-8") == old_contents
+    assert not old_path.exists()
+    assert len(load_app_configuration(config_path).strokes) == 7
+
+
+def test_existing_general_config_takes_precedence_over_legacy_name(tmp_path) -> None:
+    paths = AppDataPaths(tmp_path / "startkartenleser")
+    paths.ensure()
+    paths.config.write_text("new config", encoding="utf-8")
+    paths.legacy_recognition_policy.write_text("old config", encoding="utf-8")
+
+    assert paths.prepare_config(DEFAULT_CONFIG_PATH) == paths.config
+    assert paths.config.read_text(encoding="utf-8") == "new config"
+    assert paths.legacy_recognition_policy.read_text(encoding="utf-8") == "old config"

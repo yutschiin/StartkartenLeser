@@ -12,7 +12,9 @@ from startkartenleser.application.use_cases import StartkartenUseCases
 from startkartenleser.browser_server import BrowserServer
 from startkartenleser.browser_workflow import BrowserWorkflow
 from startkartenleser.infrastructure.application_lock import application_lock
-from startkartenleser.infrastructure.correction_policy import DEFAULT_POLICY_PATH, load_correction_policy
+from startkartenleser.infrastructure.correction_policy import (
+    DEFAULT_CONFIG_PATH, load_app_configuration,
+)
 from startkartenleser.infrastructure.image_store import ManagedImageStore
 from startkartenleser.infrastructure.paths import AppDataPaths
 from startkartenleser.infrastructure.sqlite_repositories import SqliteRepositories
@@ -34,13 +36,12 @@ def main() -> None:
     text = TextCatalog.load()
     paths = AppDataPaths(args.data_dir) if args.data_dir else AppDataPaths.default()
     paths.ensure()
-    policy_path = paths.root / "recognition-policy.json"
-    policy = load_correction_policy(policy_path if policy_path.exists() else DEFAULT_POLICY_PATH)
     with ExitStack() as stack:
         try:
             stack.enter_context(application_lock(paths.root))
         except OSError as error:
             raise SystemExit(text.text("browser.already_running")) from error
+        configuration = load_app_configuration(paths.prepare_config(DEFAULT_CONFIG_PATH))
         recognizer = LazyDEHTRLineRecognizer()
         stack.callback(recognizer.close)
         images = ManagedImageStore(paths.images)
@@ -51,9 +52,11 @@ def main() -> None:
             sessions=repositories, cards=repositories, images=images,
             aligner=TemplateCardAligner(), recognizer=recognizer,
             checkbox_proposer=ConservativeCheckboxProposer(),
-            retention=repositories, correction_policy=policy,
+            retention=repositories, correction_policy=configuration.correction_policy,
         )
-        workflow = BrowserWorkflow(repositories, images, use_cases, text)
+        workflow = BrowserWorkflow(
+            repositories, images, use_cases, text, strokes=configuration.strokes,
+        )
         server = BrowserServer(workflow, args.port)
         stack.callback(server.server_close)
         stack.callback(workflow.cancellation.set)

@@ -8,9 +8,9 @@ prebuilt desktop installer exists. Follow the ordered
 
 ## Current audit snapshot
 
-- **Public history:** `main` is being rewritten as a clean root snapshot of the
-  current source. Other local experiment branches retain their old history and
-  should not be pushed; no remote is configured.
+- **Public history:** `main` is now a clean root snapshot (`75d88f4`) with no
+  inherited commits. Other local experiment branches retain their old history
+  and should not be pushed; no remote is configured.
 - **Documentation install path was rehearsed from a source archive without Git
   metadata** on Ubuntu 26.04.1/Python 3.14.4. The exact README wheel-build/install
   recipe and no-cache setup also passed in a clean temporary copy. Other

@@ -226,7 +226,15 @@ describe("persisted retake cancellation", () => {
     sessionStorage.setItem(CARD_KEY, card.id);
     let stored = structuredClone(card);
     vi.spyOn(ApiClient.prototype, "bootstrap").mockResolvedValue({
-      sessions: [session], texts: backendTexts,
+      sessions: [session], strokes: [
+        { value: "freistil", label: "Freistil" },
+        { value: "brust", label: "Brust" },
+        { value: "ruecken", label: "Rücken" },
+        { value: "schmetterling", label: "Schmetterling" },
+        { value: "lagen", label: "Lagen" },
+        { value: "flossenschwimmen_mit_brett", label: "Flossenschwimmen mit Brett" },
+        { value: "freistil_mit_flossen", label: "Freistil mit Flossen" },
+      ], texts: backendTexts,
     });
     vi.spyOn(ApiClient.prototype, "getSession").mockImplementation(async () => ({
       session, cards: [stored],
@@ -358,7 +366,19 @@ describe("launch token hashchange", () => {
       const token = (this as unknown as { token: string }).token;
       authTokens.push(token);
       if (token === "old-token") throw new ApiError("Ungültiges Token", 403);
-      return { sessions: [session], texts: backendTexts };
+      return {
+        sessions: [session],
+        strokes: [
+          { value: "freistil", label: "Freistil" },
+          { value: "brust", label: "Brust" },
+          { value: "ruecken", label: "Rücken" },
+          { value: "schmetterling", label: "Schmetterling" },
+          { value: "lagen", label: "Lagen" },
+          { value: "flossenschwimmen_mit_brett", label: "Flossenschwimmen mit Brett" },
+          { value: "freistil_mit_flossen", label: "Freistil mit Flossen" },
+        ],
+        texts: backendTexts,
+      };
     });
     const getSession = vi.spyOn(ApiClient.prototype, "getSession").mockImplementation(
       async () => ({ session, cards: [] }),

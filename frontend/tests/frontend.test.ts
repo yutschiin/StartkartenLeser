@@ -239,5 +239,6 @@ describe("export file name", () => {
     const base = { id: "s", revision: 1, number: 3, distance_m: 100, stroke: "ruecken" };
     expect(exportFileName({ ...base, gender: "male" }, t)).toBe("wettkampf-3-100m-ruecken-maennlich.csv");
     expect(exportFileName({ ...base, gender: "female", stroke: "freistil" }, t)).toBe("wettkampf-3-100m-freistil-weiblich.csv");
+    expect(exportFileName({ ...base, gender: "female", stroke: "Über Kraul" }, t)).toBe("wettkampf-3-100m-ueber-kraul-weiblich.csv");
   });
 });

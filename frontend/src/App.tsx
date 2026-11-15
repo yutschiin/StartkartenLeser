@@ -1,4 +1,5 @@
 import {
+  Autocomplete,
   Box,
   Button,
   Card as MuiCard,
@@ -67,6 +68,7 @@ import type {
   FieldValue,
   MarkState,
   Session,
+  StrokeOption,
 } from "./types";
 
 type Screen = "overview" | "session" | "camera" | "review";
@@ -85,14 +87,6 @@ const routineFields = [
   "timekeeper",
 ] as const;
 const markFields = ["female", "male"] as const;
-const strokeOptions = [
-  "freistil",
-  "brust",
-  "ruecken",
-  "schmetterling",
-  "lagen",
-] as const;
-
 function messageFromApi(error: unknown, t: TextFn): string {
   if (!(error instanceof ApiError)) return t("error.generic");
   if (error.status === 0) return t("error.connection");
@@ -223,6 +217,7 @@ export default function App() {
   const [api, setApi] = useState<ApiClient | null>(null);
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [strokes, setStrokes] = useState<StrokeOption[]>([]);
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
@@ -265,6 +260,7 @@ export default function App() {
     );
     setTexts(backendTexts);
     setSessions(bootstrap.sessions ?? []);
+    setStrokes(bootstrap.strokes);
     return bootstrap;
   }, []);
 
@@ -359,6 +355,7 @@ export default function App() {
         );
         setTexts(backendTexts);
         setSessions(bootstrap.sessions ?? []);
+        setStrokes(bootstrap.strokes);
         const sessionId = sessionStorage.getItem(SESSION_KEY);
         const cardId = sessionStorage.getItem(CARD_KEY);
         if (sessionId) {
@@ -502,6 +499,7 @@ export default function App() {
       const created = await api.createSession(input);
       const bootstrap = await api.bootstrap();
       setSessions(bootstrap.sessions);
+      setStrokes(bootstrap.strokes);
       await loadSession(api, created);
     } catch (reason) {
       setError(localize(reason));
@@ -658,7 +656,7 @@ export default function App() {
       const url = URL.createObjectURL(csv);
       const link = document.createElement("a");
       link.href = url;
-      link.download = exportFileName(activeSession, t);
+      link.download = exportFileName(activeSession, t, strokes);
       document.body.append(link);
       link.click();
       link.remove();
@@ -726,6 +724,7 @@ export default function App() {
         {!loading && screen === "overview" && (
           <Overview
             sessions={sessions}
+            strokes={strokes}
             busy={busy}
             t={t}
             onCreate={createSession}
@@ -905,6 +904,7 @@ export default function App() {
 
 interface OverviewProps {
   sessions: Session[];
+  strokes: StrokeOption[];
   busy: boolean;
   t: TextFn;
   onCreate: (input: {
@@ -916,12 +916,17 @@ interface OverviewProps {
   onOpen: (session: Session) => Promise<void>;
 }
 
-function Overview({ sessions, busy, t, onCreate, onOpen }: OverviewProps) {
+function Overview({ sessions, strokes, busy, t, onCreate, onOpen }: OverviewProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [number, setNumber] = useState("");
   const [distance, setDistance] = useState("");
   const [stroke, setStroke] = useState("freistil");
   const [gender, setGender] = useState("female");
+
+  const openCreate = () => {
+    setStroke(strokes[0]?.value ?? "");
+    setCreateOpen(true);
+  };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -931,7 +936,7 @@ function Overview({ sessions, busy, t, onCreate, onOpen }: OverviewProps) {
   return (
     <PageLayout title={t("app.title")} showBrand
       chips={<Chip label={t("session.list") + " · " + sessions.length} variant="outlined" />}
-      actions={<Button variant="contained" startIcon={<AddIcon />} disabled={busy} onClick={() => setCreateOpen(true)}>{t("overview.add")}</Button>}
+      actions={<Button variant="contained" startIcon={<AddIcon />} disabled={busy} onClick={openCreate}>{t("overview.add")}</Button>}
     >
       <Stack spacing={2} className="overview">
         {sessions.length === 0 ? (
@@ -943,7 +948,7 @@ function Overview({ sessions, busy, t, onCreate, onOpen }: OverviewProps) {
                 <Box className={isClassified(session) ? "status-dot good" : "status-dot"} />
                 <Box sx={{ flex: 1 }}>
                   {!isClassified(session) && <Typography variant="caption" color="text.secondary">{t("session.legacy")}</Typography>}
-                  <Typography variant="h2">{sessionDisplayTitle(session, t)}</Typography>
+                  <Typography variant="h2">{sessionDisplayTitle(session, t, strokes)}</Typography>
                   {session.created_at && <Typography variant="body2" color="text.secondary">{new Date(session.created_at).toLocaleString("de-DE")}</Typography>}
                   {!isClassified(session) && <Typography className="legacy-note" color="text.secondary">{t("session.legacyHelp")}</Typography>}
                 </Box>
@@ -974,21 +979,30 @@ function Overview({ sessions, busy, t, onCreate, onOpen }: OverviewProps) {
               required
               inputProps={{ min: 1, step: 1 }}
             />
-            <FormControl>
-              <InputLabel id="create-stroke-label">{t("session.stroke")}</InputLabel>
-              <Select
-                label={t("session.stroke")}
-                labelId="create-stroke-label"
-                value={stroke}
-                onChange={(event) => setStroke(event.target.value)}
-              >
-                {strokeOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {t(`stroke.${option}`)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete<StrokeOption, false, false, true>
+              freeSolo
+              selectOnFocus
+              options={strokes}
+              value={strokes.find((option) => option.value === stroke) ?? (stroke || null)}
+              getOptionLabel={(option) => typeof option === "string" ? option : option.label}
+              isOptionEqualToValue={(option, value) =>
+                typeof value === "string" ? option.label === value : option.value === value.value
+              }
+              onChange={(_event, value) => {
+                setStroke(typeof value === "string" ? value : value?.value ?? "");
+              }}
+              onInputChange={(_event, value, reason) => {
+                if (reason === "input" || reason === "clear") setStroke(value);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t("session.stroke")}
+                  helperText={t("session.strokeHelp")}
+                  required
+                />
+              )}
+            />
             <FormControl>
               <InputLabel id="create-gender-label">{t("session.gender")}</InputLabel>
               <Select
@@ -999,6 +1013,7 @@ function Overview({ sessions, busy, t, onCreate, onOpen }: OverviewProps) {
               >
                 <MenuItem value="female">{t("gender.female")}</MenuItem>
                 <MenuItem value="male">{t("gender.male")}</MenuItem>
+                <MenuItem value="mixed">{t("gender.mixed")}</MenuItem>
               </Select>
             </FormControl>
 
@@ -1010,7 +1025,7 @@ function Overview({ sessions, busy, t, onCreate, onOpen }: OverviewProps) {
               type="submit" form="create-session-form"
               variant="contained"
               size="large"
-              disabled={busy || !number || !distance}
+              disabled={busy || !number || !distance || !stroke.trim()}
               startIcon={busy ? <CircularProgress size={18} /> : <AddIcon />}
             >
               {t("session.createAction")}

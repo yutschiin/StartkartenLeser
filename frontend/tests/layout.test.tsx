@@ -10,6 +10,15 @@ const session: Session = {
   id: "event-1", number: 1, distance_m: 25, stroke: "freistil",
   gender: "female", revision: 1, card_count: 2, created_at: "2026-11-11T12:00:00Z",
 };
+const defaultStrokes = [
+  { value: "freistil", label: "Freistil" },
+  { value: "brust", label: "Brust" },
+  { value: "ruecken", label: "Rücken" },
+  { value: "schmetterling", label: "Schmetterling" },
+  { value: "lagen", label: "Lagen" },
+  { value: "flossenschwimmen_mit_brett", label: "Flossenschwimmen mit Brett" },
+  { value: "freistil_mit_flossen", label: "Freistil mit Flossen" },
+];
 const card: Card = {
   id: "card-1", session_id: session.id, sequence: 3, state: "needs_review", revision: 1,
   fields: { name: { value: "Mustermann" }, first_name: { value: "Erika" },
@@ -21,7 +30,7 @@ const card: Card = {
 beforeEach(() => {
   sessionStorage.clear();
   sessionStorage.setItem(TOKEN_KEY, "test-token");
-  vi.spyOn(ApiClient.prototype, "bootstrap").mockResolvedValue({ sessions: [session], texts: {} });
+  vi.spyOn(ApiClient.prototype, "bootstrap").mockResolvedValue({ sessions: [session], strokes: defaultStrokes, texts: {} });
   vi.spyOn(ApiClient.prototype, "getSession").mockResolvedValue({ session, cards: [card] });
 });
 afterEach(() => {
@@ -33,7 +42,7 @@ describe("shared page layout", () => {
   it("shows known card counts in clickable overview rows and opens creation from the header", async () => {
     const user = userEvent.setup();
     const unknownCount = { ...session, id: "unknown", number: 2, card_count: undefined };
-    vi.spyOn(ApiClient.prototype, "bootstrap").mockResolvedValue({ sessions: [session, unknownCount, { ...session, id: "empty", number: 3, card_count: 0 }], texts: {} });
+    vi.spyOn(ApiClient.prototype, "bootstrap").mockResolvedValue({ sessions: [session, unknownCount, { ...session, id: "empty", number: 3, card_count: 0 }], strokes: defaultStrokes, texts: {} });
     render(<App />);
     const row = await screen.findByRole("button", { name: /Wettkampf 1 · 25 m Freistil · Weiblich/ });
     expect(within(row).getByText("2 Karten")).toBeInTheDocument();
@@ -78,6 +87,67 @@ describe("shared page layout", () => {
     await user.click(back);
     const row = await screen.findByRole("button", { name: /Wettkampf 1/ });
     expect(within(row).getByText("2 Karten")).toBeInTheDocument();
+  });
+
+  it("uses configured Lagen from bootstrap without a management button", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(ApiClient.prototype, "bootstrap").mockResolvedValue({
+      sessions: [{ ...session, stroke: "kraul_spezial", stroke_label: "Kraul Spezial" }],
+      strokes: [
+        { value: "freistil", label: "Freistil" },
+        { value: "kraul_spezial", label: "Kraul Spezial" },
+      ],
+      texts: {},
+    });
+    render(<App />);
+
+    expect(await screen.findByRole("button", { name: /Wettkampf 1 · 25 m Kraul Spezial/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Lagen verwalten/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Wettkampf hinzufügen" }));
+    const createDialog = within(screen.getByRole("dialog", { name: "Wettkampf hinzufügen" }));
+    await user.click(createDialog.getByRole("combobox", { name: "Lage" }));
+    expect(await screen.findByRole("option", { name: "Kraul Spezial" })).toBeInTheDocument();
+  });
+
+  it("accepts a one-off Lage typed into the autocomplete", async () => {
+    const user = userEvent.setup();
+    const create = vi.spyOn(ApiClient.prototype, "createSession").mockResolvedValue({
+      ...session,
+      stroke: "Speziallage",
+      stroke_label: "Speziallage",
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Wettkampf hinzufügen" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Wettkampf hinzufügen" }));
+    await user.type(dialog.getByRole("spinbutton", { name: "Nummer" }), "4");
+    await user.type(dialog.getByRole("spinbutton", { name: "Strecke (m)" }), "25");
+    await user.type(dialog.getByRole("combobox", { name: "Lage" }), "Speziallage");
+    await user.click(dialog.getByRole("button", { name: "Wettkampf erstellen" }));
+
+    await waitFor(() => expect(create).toHaveBeenCalledWith({
+      number: 4, distance_m: 25, stroke: "Speziallage", gender: "female",
+    }));
+  });
+
+  it("offers Mixed as a Wettkampfgruppe", async () => {
+    const user = userEvent.setup();
+    const create = vi.spyOn(ApiClient.prototype, "createSession").mockResolvedValue({
+      ...session,
+      gender: "mixed",
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Wettkampf hinzufügen" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Wettkampf hinzufügen" }));
+    await user.click(dialog.getByRole("combobox", { name: "Wettkampfgruppe" }));
+    await user.click(await screen.findByRole("option", { name: "Mixed" }));
+    await user.type(dialog.getByRole("spinbutton", { name: "Nummer" }), "4");
+    await user.type(dialog.getByRole("spinbutton", { name: "Strecke (m)" }), "25");
+    await user.click(dialog.getByRole("button", { name: "Wettkampf erstellen" }));
+    await waitFor(() => expect(create).toHaveBeenCalledWith({
+      number: 4, distance_m: 25, stroke: "freistil", gender: "mixed",
+    }));
   });
 
   it("shows creation failures inside the dialog without losing form values", async () => {

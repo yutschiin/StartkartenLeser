@@ -203,6 +203,7 @@ export function isClassified(session: Session): boolean {
 export function exportFileName(
   session: Session,
   text: (key: string, values?: Record<string, string | number>) => string,
+  strokes: Array<{ value: string; label: string }> = [],
 ): string {
   const gender = text(`gender.${session.gender}`)
     .toLowerCase()
@@ -210,18 +211,39 @@ export function exportFileName(
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
     .replace(/ß/g, "ss");
-  return `wettkampf-${session.number}-${session.distance_m}m-${session.stroke}-${gender}.csv`;
+  const strokeKey = `stroke.${session.stroke}`;
+  const translatedStroke = text(strokeKey);
+  const strokeLabel = translatedStroke !== strokeKey
+    ? session.stroke ?? "lage"
+    : strokes.find((item) => item.value === session.stroke)?.label
+      ?? session.stroke_label
+      ?? session.stroke
+      ?? "lage";
+  const stroke = strokeLabel
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "lage";
+  return `wettkampf-${session.number}-${session.distance_m}m-${stroke}-${gender}.csv`;
 }
 
 export function sessionDisplayTitle(
   session: Session,
   text: (key: string, values?: Record<string, string | number>) => string,
+  strokes: Array<{ value: string; label: string }> = [],
 ): string {
   if (!isClassified(session)) return text("session.legacy");
+  const strokeKey = `stroke.${session.stroke}`;
+  const localizedStroke = text(strokeKey);
+  const configuredStroke = session.stroke_label
+    ?? strokes.find((item) => item.value === session.stroke)?.label;
   return text("wettkampf.title", {
     number: session.number as number,
     distance: session.distance_m as number,
-    stroke: text(`stroke.${session.stroke}`),
+    stroke: configuredStroke ?? (localizedStroke === strokeKey ? session.stroke ?? "" : localizedStroke),
     gender: text(`gender.${session.gender}`),
   });
 }

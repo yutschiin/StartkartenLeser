@@ -43,6 +43,7 @@ export interface Session {
   number: number | null;
   distance_m: number | null;
   stroke: string | null;
+  stroke_label?: string;
   gender: string | null;
 }
 
@@ -63,7 +64,13 @@ export interface Card {
 
 export interface Bootstrap {
   sessions: Session[];
+  strokes: StrokeOption[];
   texts: Record<string, unknown>;
+}
+
+export interface StrokeOption {
+  value: string;
+  label: string;
 }
 
 export interface SessionDetail {

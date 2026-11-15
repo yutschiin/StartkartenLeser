@@ -1,0 +1,43 @@
+{
+  "strokes": [
+    {
+      "value": "freistil",
+      "label": "Freistil",
+      "synonyms": ["F", "Frei", "K", "Kraul"]
+    },
+    {
+      "value": "brust",
+      "label": "Brust",
+      "synonyms": ["B"]
+    },
+    {
+      "value": "ruecken",
+      "label": "Rücken",
+      "synonyms": ["R", "Ruecken"]
+    },
+    {
+      "value": "schmetterling",
+      "label": "Schmetterling",
+      "synonyms": ["S", "D", "Delphin"]
+    },
+    {
+      "value": "lagen",
+      "label": "Lagen",
+      "synonyms": []
+    },
+    {
+      "value": "flossenschwimmen_mit_brett",
+      "label": "Flossenschwimmen mit Brett",
+      "synonyms": ["Fl + Brett", "Fl+B"]
+    },
+    {
+      "value": "freistil_mit_flossen",
+      "label": "Freistil mit Flossen",
+      "synonyms": ["F + Fl", "Freistil + Flossen", "F + Flossen"]
+    }
+  ],
+  "recognition_policy": {
+    "max_edit_distance": 1,
+    "minimum_birth_year": 1927
+  }
+}

@@ -197,6 +197,10 @@ class Handler(BaseHTTPRequestHandler):
                     workflow.session_data(session)
                     for session in workflow.repositories.list_sessions()
                 ],
+                "strokes": [
+                    {"value": option.value, "label": option.label}
+                    for option in workflow.strokes
+                ],
                 "texts": dict(workflow.text.messages),
             })
             return

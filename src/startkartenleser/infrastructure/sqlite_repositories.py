@@ -30,7 +30,7 @@ from startkartenleser.domain.rules import InvalidCardTransition, transition_card
 from startkartenleser.infrastructure.image_store import ManagedImageStore
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class CleanupPendingError(RuntimeError):
@@ -627,6 +627,22 @@ class SqliteRepositories:
                     )
                     + """
                     PRAGMA user_version = 3;
+                    COMMIT;
+                    """
+                )
+            except Exception:
+                self._connection.rollback()
+                raise
+        if version < 4:
+            try:
+                self._connection.executescript(
+                    """
+                    BEGIN EXCLUSIVE;
+                    CREATE TABLE IF NOT EXISTS application_settings(
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    );
+                    PRAGMA user_version = 4;
                     COMMIT;
                     """
                 )

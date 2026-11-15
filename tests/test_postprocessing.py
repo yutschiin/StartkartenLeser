@@ -6,7 +6,8 @@ import pytest
 from startkartenleser.domain.contracts import RecognitionCandidate
 from startkartenleser.domain.postprocessing import CorrectionPolicy, correct_candidate, edit_distance
 from startkartenleser.infrastructure.correction_policy import (
-    DEFAULT_POLICY_PATH,
+    DEFAULT_CONFIG_PATH,
+    load_app_configuration,
     load_correction_policy,
 )
 
@@ -38,16 +39,62 @@ def test_position_policy_can_disable_aliases_and_fuzzy_matching():
 
 
 def test_configuration_rejects_ambiguous_aliases_and_unknown_keys(tmp_path):
-    data = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="utf-8"))
-    data["positions"]["Brust"].append("R")
+    data = json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
+    next(stroke for stroke in data["strokes"] if stroke["value"] == "brust")["synonyms"].append("R")
     path = tmp_path / "policy.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="ambiguous"):
-        load_correction_policy(path)
+        load_app_configuration(path)
     data["typo"] = True
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError):
-        load_correction_policy(path)
+        load_app_configuration(path)
+
+
+def test_configured_strokes_and_synonyms_are_loaded_for_the_recognition_policy(tmp_path):
+    data = json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
+    data["strokes"].append({
+        "value": "butterfly", "label": "Butterfly", "synonyms": ["Delfin"],
+    })
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    config = load_app_configuration(path)
+    assert config.strokes[-1].value == "butterfly"
+    assert config.strokes[-1].label == "Butterfly"
+    assert correct_candidate(
+        RecognitionCandidate("position", "Delfin"), config.correction_policy,
+    ).text == "Butterfly"
+
+
+@pytest.mark.parametrize(("raw", "expected"), [
+    ("Fl + Brett", "Flossenschwimmen mit Brett"),
+    ("Fl+B", "Flossenschwimmen mit Brett"),
+    ("F + Fl", "Freistil mit Flossen"),
+    ("Freistil + Flossen", "Freistil mit Flossen"),
+    ("F + Flossen", "Freistil mit Flossen"),
+])
+def test_default_config_recognizes_new_fin_swimming_synonyms(raw, expected):
+    result = correct_candidate(RecognitionCandidate("position", raw), load_correction_policy())
+    assert result.text == expected
+
+
+def test_previous_standalone_policy_files_keep_default_dropdown_options(tmp_path):
+    path = tmp_path / "recognition-policy.json"
+    path.write_text(json.dumps({
+        "positions": {"Kraul": ["K"]},
+        "max_edit_distance": 0,
+        "minimum_birth_year": 1927,
+    }), encoding="utf-8")
+
+    config = load_app_configuration(path)
+    assert [option.value for option in config.strokes] == [
+        "freistil", "brust", "ruecken", "schmetterling", "lagen",
+        "flossenschwimmen_mit_brett", "freistil_mit_flossen",
+    ]
+    assert correct_candidate(
+        RecognitionCandidate("position", "K"), config.correction_policy,
+    ).text == "Kraul"
 
 
 def test_distance_computes_substitutions_insertions_and_deletions():
@@ -138,8 +185,8 @@ def test_year_ocr_correction_respects_configured_range_and_rejects_century_ties(
 
 
 def test_legacy_policy_without_birth_year_setting_remains_supported(tmp_path):
-    data = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="utf-8"))
-    data.pop("minimum_birth_year", None)
+    data = json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
+    data["recognition_policy"].pop("minimum_birth_year", None)
     path = tmp_path / "policy.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     assert load_correction_policy(path).minimum_birth_year == 1927
@@ -147,8 +194,8 @@ def test_legacy_policy_without_birth_year_setting_remains_supported(tmp_path):
 
 @pytest.mark.parametrize("minimum", [True, "1927", None, 1899, 10000])
 def test_policy_rejects_invalid_minimum_birth_year(tmp_path, minimum):
-    data = json.loads(DEFAULT_POLICY_PATH.read_text(encoding="utf-8"))
-    data["minimum_birth_year"] = minimum
+    data = json.loads(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
+    data["recognition_policy"]["minimum_birth_year"] = minimum
     path = tmp_path / "policy.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(ValueError, match="minimum_birth_year"):

@@ -26,6 +26,7 @@ from startkartenleser.domain.contracts import (
 from startkartenleser.domain.schema import RECOGNITION_REGIONS
 from startkartenleser.infrastructure.application_lock import application_lock
 from startkartenleser.infrastructure.correction_policy import load_correction_policy
+from startkartenleser.infrastructure.correction_policy import StrokeOption
 from startkartenleser.infrastructure.image_store import ManagedImageStore
 from startkartenleser.infrastructure.sqlite_repositories import CleanupPendingError, SqliteRepositories
 from startkartenleser.localization import TextCatalog
@@ -165,8 +166,9 @@ def test_offline_assets_and_http_boundary(server):
 
 @pytest.mark.parametrize("changes", [
     {"number": 0}, {"number": True}, {"number": 1.5}, {"number": "2"},
-    {"distance_m": -1}, {"distance_m": 0}, {"stroke": "other"},
-    {"gender": "guessed"}, {"stroke": []},
+    {"distance_m": -1}, {"distance_m": 0}, {"stroke": ""}, {"stroke": "  "},
+    {"stroke": "x" * 81}, {"stroke": "bad\nname"}, {"gender": "guessed"},
+    {"stroke": []}, {"stroke": True},
 ])
 def test_invalid_event_metadata_is_explicitly_rejected(server, changes):
     payload = {"number": 2, "distance_m": 50, "stroke": "ruecken", "gender": "female", **changes}
@@ -174,6 +176,58 @@ def test_invalid_event_metadata_is_explicitly_rejected(server, changes):
     assert status == 400
     assert body["message"] and body["error"] == "browser.invalid_request"
     assert not server.workflow.repositories.list_sessions()
+
+
+def test_configured_strokes_drive_bootstrap_creation_and_card_expectation(server):
+    defaults = request(server, "/api/bootstrap")[1]["strokes"]
+    assert defaults == [
+        {"value": "freistil", "label": "Freistil"},
+        {"value": "brust", "label": "Brust"},
+        {"value": "ruecken", "label": "Rücken"},
+        {"value": "schmetterling", "label": "Schmetterling"},
+        {"value": "lagen", "label": "Lagen"},
+        {"value": "flossenschwimmen_mit_brett", "label": "Flossenschwimmen mit Brett"},
+        {"value": "freistil_mit_flossen", "label": "Freistil mit Flossen"},
+    ]
+
+    server.workflow.strokes = (StrokeOption("kraul_spezial", "Kraul Spezial", ("Kraul",)),)
+    assert request(server, "/api/bootstrap")[1]["strokes"] == [
+        {"value": "kraul_spezial", "label": "Kraul Spezial"},
+    ]
+    event = session(server, stroke="kraul_spezial")
+    assert event["title"] == "Wettkampf 2 · 50 m Kraul Spezial · Weiblich"
+    assert server.workflow.export_filename(event["id"]) == "wettkampf-2-50m-kraul-spezial-weiblich.csv"
+    card = capture(server, event["id"])
+    assert card["fields"]["position"]["value"] == "Kraul Spezial"
+
+
+def test_unlisted_custom_stroke_can_be_used_for_one_wettkampf(server):
+    event = session(server, stroke="Speziallage")
+    assert event["stroke"] == "Speziallage"
+    assert event["stroke_label"] == "Speziallage"
+    assert event["title"] == "Wettkampf 2 · 50 m Speziallage · Weiblich"
+
+    card = capture(server, event["id"])
+    assert card["fields"]["position"]["value"] == "Speziallage"
+
+
+def test_mixed_wettkampf_group_does_not_assume_a_single_gender_checkbox(server):
+    event = session(server, gender="mixed")
+    assert event["gender"] == "mixed"
+    assert event["title"] == "Wettkampf 2 · 50 m Rücken · Mixed"
+    card = capture(server, event["id"])
+    server.workflow.use_cases.recognizer.course_position = "50m Rücken"
+    server.workflow.use_cases.checkbox_proposer.states = {
+        "female": CheckboxState.CHECKED,
+        "male": CheckboxState.UNCHECKED,
+    }
+
+    status, result, _ = request(server, f"/api/cards/{card['id']}/recognize", "POST", {
+        "revision": card["revision"],
+    })
+
+    assert status == 200
+    assert result["reference_check"]["warnings"] == {}
 
 
 def test_session_card_count_in_bootstrap_and_detail(server):

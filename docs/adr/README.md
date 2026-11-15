@@ -12,3 +12,4 @@ choices are labeled; the current UI decision is [ADR-0007](ADR-0007-local-browse
 | [0005](ADR-0005-ocr-engine-evaluation.md) | DE·HTR v2 local recognition | Accepted; accuracy not certified |
 | [0006](ADR-0006-keyed-localization-catalogs.md) | Keyed application text | Accepted; German only |
 | [0007](ADR-0007-local-browser-mui.md) | Local browser interface | Current |
+| [0008](ADR-0008-configurable-lagen.md) | Use a general local application config file | Accepted |

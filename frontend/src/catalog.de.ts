@@ -5,6 +5,7 @@ export const de = {
   "session.number": "Nummer",
   "session.distance": "Strecke (m)",
   "session.stroke": "Lage",
+  "session.strokeHelp": "Aus der Liste wählen oder eine eigene Lage eingeben.",
   "session.gender": "Wettkampfgruppe",
   "session.legacy": "Altbestand ohne Wettkampfdaten",
   "session.legacyHelp":
@@ -133,6 +134,7 @@ export const de = {
   "stroke.lagen": "Lagen",
   "gender.female": "Weiblich",
   "gender.male": "Männlich",
+  "gender.mixed": "Mixed",
   "error.auth": "Die Startadresse ist abgelaufen. Öffnen Sie die Adresse aus dem Terminal erneut.",
   "error.connection": "Der lokale Server ist nicht erreichbar. Eingaben bleiben erhalten.",
   "error.stale": "Der gespeicherte Eintrag ist nicht mehr verfügbar. Wählen Sie einen Wettkampf oder eine Karte erneut aus.",

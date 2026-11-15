@@ -2,7 +2,7 @@
 
 Name, Vorname, Jahrgang and Geschlecht can be typed on a laptop or phone; the
 lower half stays a printed handwriting area for the TSV. Layout and ArUco
-markers match docs/startkarte-a6-proposal.html (DICT_4X4_50, IDs 0-3).
+markers match docs/startkarte-a6-template.html (DICT_4X4_50, IDs 0-3).
 
     .venv/bin/pip install -e ".[forms]"
     .venv/bin/python scripts/make_startkarte_form.py

@@ -1,9 +1,14 @@
-# Architecture Decision Records
+# Architecture decisions
 
-- [ADR-0001: Python desktop baseline](ADR-0001-desktop-baseline.md)
-- [ADR-0002: User-controlled data retention](ADR-0002-user-controlled-retention.md)
-- [ADR-0003: Desktop image-import and manual-entry vertical slice](ADR-0003-desktop-manual-entry-flow.md)
-- [ADR-0004: Form-first review layout](ADR-0004-form-first-review-layout.md)
-- [ADR-0005: Select DE·HTR v2 for the desktop OCR-enabled MVP](ADR-0005-ocr-engine-evaluation.md)
-- [ADR-0006: Store all application UI text in keyed locale catalogs](ADR-0006-keyed-localization-catalogs.md)
-- [ADR-0007: Local browser UI with React and Material UI](ADR-0007-local-browser-mui.md)
+These records explain decisions that shape the current application. Superseded
+choices are labeled; the current UI decision is [ADR-0007](ADR-0007-local-browser-mui.md).
+
+| ADR | Decision | Status |
+|---|---|---|
+| [0001](ADR-0001-desktop-baseline.md) | Python application and local data | Python core accepted; Tk UI superseded |
+| [0002](ADR-0002-user-controlled-retention.md) | User-controlled retention | Accepted |
+| [0003](ADR-0003-desktop-manual-entry-flow.md) | File intake and manual review | Partially superseded; file fallback remains |
+| [0004](ADR-0004-form-first-review-layout.md) | Review beside the source image | Current layout in ADR-0007 |
+| [0005](ADR-0005-ocr-engine-evaluation.md) | DE·HTR v2 local recognition | Accepted; accuracy not certified |
+| [0006](ADR-0006-keyed-localization-catalogs.md) | Keyed application text | Accepted; German only |
+| [0007](ADR-0007-local-browser-mui.md) | Local browser interface | Current |

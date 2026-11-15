@@ -1,113 +1,93 @@
-# Architecture — StartkartenLeser
+# Architecture
 
-**Current UI:** Local browser, React/TypeScript and Material UI.
-See [ADR-0007](adr/ADR-0007-local-browser-mui.md) and the
-[takeover plan](feature-designs/browser-mui-implementation.md).
-
-## Components
+## Runtime
 
 ```text
-Browser: bundled React/MUI application
-  ├─ Wettkampf setup and overview
-  ├─ getUserMedia camera / user-selected PNG or JPEG
-  └─ Keyboard-first review, autosave, approval and CSV download
-                  │ authenticated same-origin loopback HTTP
-Python browser_server.py
-                  │
-browser_workflow.py: browser action orchestration
-  ├─ Existing StartkartenUseCases: alignment, real OCR, corrections, approval
-  ├─ SqliteRepositories: sessions/Wettkämpfe, cards and evidence
-  └─ ManagedImageStore: validated originals and retryable cleanup
+React/TypeScript + Material UI (bundled static files in the browser)
+                           │ same-origin loopback HTTP
+Python app.py → browser_server.py → browser_workflow.py
+                                      ├─ application use cases
+                                      ├─ SQLite repositories
+                                      ├─ managed image storage
+                                      └─ alignment, OCR and correction policy
 ```
 
-`app.py` composes the existing recognizer/aligner/repositories, binds the server
-to `127.0.0.1` and opens the launch URL. The Python process serves built assets;
-Node is build tooling, never a runtime server. The old Tk UI is removed.
-Domain models remain free of browser, HTTP, SQLite and widget dependencies.
+The Python process serves the built frontend and owns application state. It
+binds to `127.0.0.1` on a random port and opens the launch URL. Node/npm are
+build-time tools only. The browser owns camera access and can also send a
+user-selected PNG/JPEG image. The domain and application layers do not depend on
+React, HTTP, SQLite, or browser APIs.
 
-## Persistence and migration
+## Capture and review
 
-The production data location remains
-`$XDG_DATA_HOME/startkartenleser` or `~/.local/share/startkartenleser`.
-`--data-dir` selects a different directory; spike data is never imported.
-One process holds an OS lock per data directory.
+The browser sends an image to the Python workflow. The backend validates and
+stores a managed copy and creates a card before recognition. Capture requests
+are idempotent so retries do not create duplicate cards. A retake replaces the
+image on the same card only after the new image is committed; failed attempts
+retain the old image and data.
 
-SQLite schema v2 adds nullable Wettkampf metadata to existing sessions and a
-capture-request deduplication table. Internal `Session`/`session_id` names remain
-compatible. New Wettkämpfe require positive number/distance and explicit
-stroke/category keys. Existing sessions retain null metadata and all original
-membership/evidence. Users may split a mixed legacy batch by moving individual
-cards into explicit Wettkämpfe.
+Recognition uses layout-specific alignment/crops, the bundled DE·HTR v2 ONNX
+model, a separate conservative checkbox detector, and a local correction policy.
+Results are suggestions. Wettkampf metadata is authoritative; OCR comparisons
+can produce visible mismatch warnings but do not change event metadata or
+approve cards. Users can edit fields and marks, save drafts, and explicitly
+approve. Editing an approved card returns it to review. Unsafe alignment or OCR
+failure leaves the image and card available for manual entry or retake.
 
-Before upgrading an existing schema-v1 database, SQLite's backup API creates
-`startkartenleser.before-v2.sqlite3` next to it. Migration is transactional;
-future versions are rejected. An already-present backup blocks a retry rather
-than overwriting the earlier snapshot. Preserve/move that backup before retrying.
-To restore, stop every application instance, retain the current database and
-images as a separate backup, restore the v1 snapshot into a separate data
-directory with its corresponding images, and use the pre-migration application.
-Database backup alone is not a full image backup.
+Frontend writes are revision-checked and serialized. Editing never means
+approval; failed writes retain unsaved input rather than advancing. OCR access
+is serialized, while regular draft edits remain available. On restart,
+interrupted alignment/recognition returns to review.
 
-Wettkampf metadata is initially immutable. Moving a card allocates its new
-sequence transactionally and invalidates approval; IDs, image and provenance
-survive. Numbering is not globally unique.
+## Data and migration
 
-## Capture, drafts and recognition
+The production data directory is `$XDG_DATA_HOME/startkartenleser` or
+`~/.local/share/startkartenleser`; `--data-dir` selects another directory. One
+application process may hold a data directory at a time.
 
-Capture validates a bounded PNG/JPEG, durably copies it into private storage,
-then commits the card and capture-request ID. Retrying the identical request
-cannot create a second card. Retake retains the same ID/sequence, replaces the
-image and clears evidence in one transaction; the old image remains until the
-new reference commits, then deletion uses the durable outbox.
+SQLite schema v3 stores sessions, cards, event metadata, fields, checkbox marks,
+OCR evidence, capture-request IDs, reference comparisons, and pending image
+deletions. The UI calls classified sessions **Wettkämpfe**; internal `Session`
+names remain for compatibility. New capture and export require complete event
+metadata. Old sessions are left unclassified rather than inferred from card
+OCR; users can explicitly move their cards into a new Wettkampf.
 
-Draft PATCHes carry revisions and only changed fields. They never confirm
-values. Editing a reviewed card revokes its review state. Frontend writes are
-serialized; blur and approval flush queued edits. Errors retain dirty input and
-prevent success-shaped advancement.
+Opening a schema-v1 database creates a SQLite backup beside it named
+`startkartenleser.before-v2.sqlite3` before migration. Migration is transactional
+and newer unsupported schemas are rejected. An existing snapshot blocks a
+second migration attempt rather than being overwritten. Keep the database and
+its images together in backups; a database-only backup cannot restore card
+images.
 
-Real DE·HTR v2 recognition is an explicit action, not an automatic blocker
-between capture and entry. `StartkartenUseCases` retains layout-specific
-alignment/crops, conservative independent mark proposals, correction policy,
-raw OCR, provenance and confidence. Missing models or unsafe alignment remain
-visible manual-review cases. Manual/confirmed values are protected. Revision
-changes discard obsolete recognition; recognizer access is serialized while
-ordinary draft requests can proceed independently.
+Card movement preserves card IDs, images and evidence, allocates a new sequence
+in the destination, and invalidates approval. Retake and deletion use retryable
+managed-image cleanup. Deleting a card or Wettkampf removes app-managed copies,
+not the user's original files or downloaded CSV exports.
 
-On restart, interrupted recognition returns to `needs_review`. Source images
-and saved values remain available. Reloading the same browser origin restores
-the selected card from session storage; a new random port starts at the overview,
-where persisted Wettkämpfe and drafts can be reopened.
-The original is displayed beside entry. The old corner-adjustment tool is not
-ported; use manual transcription or retake when alignment is unsafe.
+## Local service and privacy boundary
 
-## HTTP and privacy boundary
+The server accepts the exact loopback Host, uses a random per-launch token from
+the URL fragment for API/image access, requires the exact Origin for mutations,
+and enables no CORS. Static paths are confined to bundled assets. Content
+Security Policy disallows remote resources and inline scripts; microphone access
+is disabled. Input sizes and image decoding are bounded.
 
-The server accepts only the exact loopback Host. APIs/images require a random
-per-launch `X-App-Token`. Mutations require the exact Origin, reads reject
-foreign Origins, and no CORS is enabled. The fragment token is removed from the
-address bar after session storage. Reloading an old tab after a server restart
-requires the new launch URL.
-
-Assets are local; CSP disallows remote resources and inline scripts. Inline
-styles are allowed for MUI/Emotion. Microphone permission is disabled and camera
-requests specify `audio: false`. Image/request sizes and decoding dimensions
-are bounded. Static paths cannot escape the bundled directory.
-
-There are no access logs containing tokens, image references or field values.
-No hosted OCR, analytics or synchronization is used. Local storage and exported
-CSV are not encrypted; OS account security, retention and backups remain the
-user's responsibility. Deletion removes managed copies, not imported originals
-or independently downloaded CSV.
+The application has no hosted OCR, analytics, synchronization, or remote card
+storage. Model files may be fetched during setup if bundled copies are missing
+or invalid; card images and text are never sent. Local files, SQLite, and CSV
+exports are not encrypted. OS account access, backups, retention, and export
+handling remain the user's responsibility.
 
 ## Build and verification
 
-`frontend/` contains the npm lock, TypeScript source and frontend tests. The
-Vite build writes `src/startkartenleser/web_static/`, included by Python package
-data. Commit source and rebuilt assets together. Python dependencies remain
-unchanged by the UI choice.
+The frontend lives in `frontend/`; Vite writes production files to
+`src/startkartenleser/web_static/`, which is included in Python distributions.
+Keep frontend source, npm lockfile, generated static assets, and frontend
+third-party notices in sync. A wheel build packages the checked-in assets and
+does not run npm.
 
-Backend tests cover authentication/origin/host checks, migration, capture
-deduplication, retake rollback, autosave versus approval, stale revisions,
-concurrent OCR edits, legacy moves, deletion and CSV. Existing domain/OCR tests
-remain in place. Frontend type/build/tests and actual browser checks complement
-them; no headless-only result is evidence of camera/device compatibility.
+The Python tests cover persistence, migrations, image lifecycle, workflow,
+recognition, HTTP security, and export. Frontend tests cover UI behavior,
+keyboard navigation and draft saving. Browser/device testing is still needed to
+verify camera access on a particular machine; automated tests do not establish
+camera compatibility.

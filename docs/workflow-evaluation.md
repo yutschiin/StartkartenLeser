@@ -9,7 +9,7 @@ separate permission-cleared directory for any new validation set.
 
 Photograph each of the 16 cards separately, with the entire card and its corner
 markers visible. Keep the originals. Copy/rename each photo to the **exact**
-`image_filename` in [`tests/reference_data.csv`](../../tests/reference_data.csv):
+`image_filename` in [`tests/reference_data.csv`](../tests/reference_data.csv):
 `karte-01-mueller-anna.jpg`, …, `karte-16-braun-oskar.jpg`. The CSV lists all
 16 names. Mapping is by filename only, never by recognized person/name.
 JPEG and PNG image contents are supported; no HEIC or PDF conversion is done.

@@ -1,23 +1,31 @@
-# ADR-0001: Python desktop baseline
+# ADR-0001: Python application and local data
 
-- **Status:** Python/storage/recognition accepted; Tk UI superseded by [ADR-0007](ADR-0007-local-browser-mui.md)
+- **Status:** Accepted for the Python domain, persistence and recognition layers;
+  the Tkinter UI decision is superseded by [ADR-0007](ADR-0007-local-browser-mui.md).
 - **Date:** 2026-11-03
 
 ## Context
 
-StartkartenLeser Desktop needs a cross-platform desktop UI, local persistence, image intake, and a path to local handwriting recognition. The first release should stay simple to run and should not require a web service or remote infrastructure.
+The application needs local persistence, image handling and replaceable local
+handwriting recognition without a hosted service. Python and SQLite provide the
+application core; a UI can be changed without moving data or recognition into a
+remote service.
 
 ## Decision
 
-- Use **Python 3.11 or newer** as the runtime baseline.
-- Use **Tkinter/ttk** for the native desktop UI and standard file dialogs for explicit image selection.
-- Use Python's **SQLite (`sqlite3`)** support for structured local data and app-managed files for image copies.
-- Keep recognition behind a provider-neutral local interface. DE·HTR v2 is the selected initial desktop MVP adapter; retain the unavailable stub as manual fallback and a deterministic test double. See [ADR-0005](ADR-0005-ocr-engine-evaluation.md).
-- Keep optional runtime dependencies limited and document them before adding them. Python distributions must include Tk support.
+- Use Python 3.11+ for the application and SQLite for structured local data.
+- Keep card images in application-managed local storage and retain the original
+  user-selected files unchanged.
+- Keep recognition behind a local, replaceable interface. DE·HTR v2 is the
+  selected initial recognizer; see [ADR-0005](ADR-0005-ocr-engine-evaluation.md).
+- Use the local browser UI described in ADR-0007. Tkinter is not a runtime
+  requirement.
 
 ## Consequences
 
-- The first implementation can be developed and tested using standard Python desktop tooling without a server.
-- Python installations without Tk support are unsupported; packaging must bundle or clearly document the required runtime/Tk components.
-- Supported operating systems and packaging/distribution strategy remain to be confirmed before release.
-- Local storage location and operating-system backup behavior must be documented for each supported OS.
+- UI changes do not require replacing domain rules, persistence, or recognition.
+- The application has no hosted runtime dependency. Setup may access package
+  registries and fetch pinned model assets when bundled files are unavailable.
+- Linux/Python 3.14 is the verified environment; package metadata permits Python
+  3.11+, but other versions and operating systems are not currently claimed as
+  tested.

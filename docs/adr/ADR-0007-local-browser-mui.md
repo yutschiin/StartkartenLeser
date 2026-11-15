@@ -1,50 +1,45 @@
-# ADR-0007: Local browser UI with React and Material UI
+# ADR-0007: Local browser interface with React and Material UI
 
-- **Status:** Accepted by the user after the browser camera spike
-- **Supersedes:** UI choice in ADR-0001; Tk-specific presentation in ADR-0003/0004
-- **Branch:** `epic/keyboard-first-wettkampf-workflow`
+- **Status:** Accepted; current UI architecture.
+- **Supersedes:** Tkinter as the production UI in ADR-0001 and the presentation
+  details in ADR-0003/ADR-0004.
 
 ## Context
 
-The keyboard-first Wettkampf workflow needs modern components, predictable
-focus, real camera capture and local, durable data. Independent Qt/PySide and
-local-browser spikes were tested. The user selected the successful browser
-approach and explicitly requested Material UI.
+The keyboard-first Wettkampf workflow needs camera access, predictable focus,
+editable local data and a maintainable interface while retaining the Python
+recognition and persistence core. A local browser UI meets this without shipping
+an embedded browser runtime.
 
 ## Decision
 
-- Replace Tkinter with React/TypeScript and real `@mui/material` components.
-- Bundle the production frontend into the Python distribution. No CDN, remote
-  fonts, analytics, external assets or Node process at runtime.
-- Keep Python, SQLite, managed images and DE·HTR v2. The browser talks only to
-  the Python standard-library HTTP server on `127.0.0.1`.
-- Use a random port and per-launch capability token delivered in the URL
-  fragment. Validate exact Host, token and mutation Origin; do not enable CORS.
-- Use browser `getUserMedia` for video only, with file selection as fallback.
-- Retain keyed German catalogs: Python owns existing field/domain messages;
-  frontend-only presentation strings live in its keyed German catalog.
-- Use debounced/blur draft saving, separate deliberate approval, transactional
-  retake, explicit local recognition and reviewed-Wettkampf CSV export.
+- Use React, TypeScript and Material UI for the interface. Bundle its built
+  assets with the Python application; use no CDN, remote fonts or runtime Node
+  process.
+- Keep Python responsible for workflow, local HTTP service, SQLite, managed
+  images and recognition. Serve the UI and API on loopback only.
+- Use browser camera APIs for capture and support user-selected PNG/JPEG files
+  as an alternative. Request video only; do not request microphone access.
+- Protect the local service with a per-launch token, exact loopback Host and
+  Origin checks, and no CORS. This is a single-user local app, not a network
+  deployment target.
+- Keep draft saving separate from explicit approval. Support retake, local
+  recognition, review, deletion, legacy-card reassignment and reviewed-event
+  CSV export.
 
 ## Consequences
 
-An installed compatible browser and camera permission are required. Closing the
-tab releases the camera, not the Python process; Ctrl+C in the terminal stops
-the server. Linux/Chromium with the Razer Kiyo is the initial tested target,
-not a claim of Windows/macOS or every browser support.
+- A compatible desktop browser is required to use the app; camera capture also
+  requires browser permission. Chromium on Linux is the tested example, not a
+  claim of compatibility with every browser, device or operating system.
+- Node/npm are required to build from source, but not to run a package with its
+  bundled UI assets.
+- The Python server must remain open while the browser UI is in use. Closing the
+  tab releases the camera; Ctrl+C stops the server.
+- Wettkampf metadata is immutable after creation. Older unclassified sessions
+  are not assigned metadata automatically; users explicitly move their cards.
+- The CSV format is versioned, but compatibility with any particular external
+  meet-management program is not certified.
 
-Development builds require Node/npm; running built Python packages does not.
-Emotion/MUI injects styles, so CSP permits inline styles but not inline scripts.
-The server is a single-user local service, not a network deployment target.
-The data-directory process lock prevents simultaneous cleanup by independent
-instances.
-
-Initial Wettkampf metadata is immutable. Old mixed sessions remain unclassified
-until cards are explicitly moved, never inferred from OCR. The CSV v1 dialect is
-documented in the takeover plan; compatibility with a particular meet-management
-program still needs verification.
-
-The old manual corner editor is not ported. Unsafe alignment falls back to
-manual transcription or retake; no guessed crop is passed to the recognizer.
-All feedback uses queued, accessible MUI snackbars (persistent ones carry an
-action button where needed); ongoing state is an overlay on the card image.
+See [architecture](../architecture.md) for runtime and security details and
+[CSV format](../csv-format.md) for the export contract.

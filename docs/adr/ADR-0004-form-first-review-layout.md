@@ -1,22 +1,29 @@
-# ADR-0004: Form-first review layout
+# ADR-0004: Review the form beside its source image
 
-- **Status:** Superseded in part by the updated review requirement in [PRD FR-15](../prd.md#6-functional-requirements)
+- **Status:** Current layout is set by
+  [ADR-0007](ADR-0007-local-browser-mui.md); the earlier form-only presentation
+  is superseded.
 - **Date:** 2026-11-03
 
 ## Context
 
-The user expects to have the physical Startkarte available while entering or validating values. Showing the imported image alongside the form consumes screen space and is not required for the primary review workflow. The copied image remains needed for local recognition and retention.
+OCR suggestions need to be checked against the handwriting on the physical card.
+Keeping a stored image without showing it during review would make that check
+less direct.
 
 ## Decision
 
-- Keep a private copy of the imported card image with the card record.
-- Earlier decision: do not display the source image on the review/data-entry screen. This image-visibility decision is superseded by the updated product requirement to show the source beside the form with labeled crop overlays; the printed field order and desktop usability guidance below remain applicable.
-- Match the printed card's order: `Name` and `Vorname` on separate lines, then `Jahrgang`, then the `Mädchen` and `Junge` checkboxes on one line; pair `Strecke`/`Lage` and `Lauf`/`Bahn`; put `erzielte Zeit` and `Zeitnehmer` on separate lines.
-- Keep controls compact, use standard resizable Tkinter/ttk widgets, support keyboard traversal and scrolling for smaller windows, and keep save/next actions easy to reach.
-- Do not force mobile-specific dimensions or icon-only actions. Use clear desktop labels and standard buttons/menus.
+- Show the card image beside the editable review form, with detected field regions
+  overlaid when alignment is safe.
+- Keep fields in card order: name, first name, year, gender selection, event
+  number/course/stroke observations, heat and lane, time, and timekeeper.
+- Keep the form keyboard-accessible and usable at different window sizes.
+- Do not offer manual corner adjustment. When alignment is unsafe, show the
+  source image and let the user transcribe manually or retake the image.
 
 ## Consequences
 
-- The form remains focused and usable without a webcam or split-image layout.
-- Users are expected to retain access to the physical card during review. A separate image viewer may be considered later if user testing shows that assumption does not hold.
-- The layout should adapt to window resizing and platform-native widget metrics without changing field order or semantics.
+- Image and form share the review screen; the image is evidence, not an OCR
+  guarantee.
+- Unsafe alignment must not be used to pass guessed crops to recognition.
+- The printed card remains the reference for every value.

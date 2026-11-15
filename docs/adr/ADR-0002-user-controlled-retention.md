@@ -5,18 +5,25 @@
 
 ## Context
 
-Startkarten contain personal information. Users need to return to a session and continue reviewing cards, while having clear control over deletion. The MVP has no export or cloud synchronization.
+Startkarten contain personal information. Users need to resume work and to
+control deletion of stored cards and Wettkämpfe. There is no cloud archive or
+automatic retention service.
 
 ## Decision
 
-- Retain card image copies and structured session data locally until the user deletes a card/session or removes the application's data.
-- Do not automatically expire or delete saved cards in the MVP.
-- Provide deletion for an individual card and a complete session, including associated image copies and derived values.
-- Store data in a documented, application-specific directory. The application does not control user-managed operating-system backups.
+- Retain card records, recognized values and managed image copies locally until
+  the user deletes a card/Wettkampf or removes the application data directory.
+- Do not automatically expire or delete saved data.
+- Deleting a card or Wettkampf removes its application-managed records and image
+  copies. It does not remove the user's original image or a separately exported
+  CSV.
+- Store data in the documented application-specific directory. The application
+  does not control operating-system backups.
 
 ## Consequences
 
-- The application must explain retention, the local data location, and how deletion works.
-- Data can remain on the computer indefinitely if the user does not delete it; storage use and this consequence should be communicated.
-- User-managed backups may contain sensitive local app data. Do not claim that desktop app data is excluded from backup.
-- Deleting an imported card removes the app's stored copy, not the user's original image file.
+- Users must be told where data is stored, how to delete it and that it may remain
+  indefinitely until they do so.
+- Backups should include the complete data directory, including images.
+- Local storage is not encrypted by the application; access depends on the
+  operating-system account and device security.

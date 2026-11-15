@@ -193,7 +193,7 @@ def test_full_workflow_groups_and_scores_actual_csv_without_edits(dataset, tmp_p
     assert course["exported_value"] == "50"
     assert course["expected"] == "50 m"
     assert course["final_origin"] == "event_reference"
-    assert course["export_origin"] == "event_metadata"
+    assert course["export_origin"] == "card_field"
     assert (output / "data/startkartenleser.sqlite3").is_file()
     assert len(list((output / "data/images").iterdir())) == 16
     assert len(list((output / "evidence").glob("*.json"))) == 16

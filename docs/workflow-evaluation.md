@@ -25,7 +25,7 @@ PYTHONPATH=src .venv/bin/python scripts/evaluate_wettkampf_workflow.py \
 
 `--references path/to/references.csv` optionally selects another reference set.
 The default 16 cards produce **144 observations: nine fields per card**.
-Zeitnehmer/timekeeper stays on the cards, in the app, and in CSV v1, but is
+Zeitnehmer/timekeeper stays on the cards, in the app, and in CSV v2, but is
 excluded from **all evaluation scores**, including the older reference evaluator.
 
 Use a **new, nonexistent** output directory for every run, outside the photo
@@ -48,7 +48,7 @@ proposer and default correction policy as the composition root:
 2. Import each mapped photo through `capture` (a managed copy, original unchanged).
 3. Recognize, preserving application responses and original OCR evidence.
 4. Approve with **only the current revision**, no field edits or checkbox edits.
-5. Export the event through the application's CSV v1 exporter.
+5. Export the event through the application's CSV v2 exporter.
 
 Validation issues and missing required readings are logged as
 `validation_warning`, but every captured card is submitted to the production
@@ -83,9 +83,9 @@ blank, missing or unavailable):
   event export was blocked.
 - **Export:** values read back from the actual application CSV. A blocked event
   contributes nine explicit zero observations per card, never disappears from
-  the denominator. The six per-card fields use their `*_text`/text columns;
-  course and position use `distance_m` and `stroke_key`. Gender uses the exported
-  `female_mark`/`male_mark` pair. CSV v1 is unchanged.
+  the denominator. Card fields are read from their corresponding CSV columns;
+  gender uses the exported `female_mark`/`male_mark` pair. CSV v2 contains card
+  data only; the Wettkampf is used for the filename.
 - **OCR:** genuine raw transcriptions versus the reference, before correction
   suggestions or event substitution. For course/position/gender the source is
   the repository's persisted **reference evidence**, not the event-filled fields
@@ -93,11 +93,11 @@ blank, missing or unavailable):
   unambiguous. Stroke aliases from the policy are accepted, but fuzzy repairs
   are not credited in the raw score. Missing/ambiguous checkbox pairs earn zero.
 
-**Course, position and gender are supplied by event metadata in the production
-workflow.** Their persisted/export success is metadata/workflow correctness,
-**not OCR accuracy**. `final_origin`, `export_origin` and `ocr_origin` identify
-these sources. Consult the separate field counts in `summary.json` and raw
-columns in `field-scores.csv`, especially for those three fields.
+Course, position and gender are reviewed card values in the export. In workflow
+evaluation they may be initialized from the event or reference data; exported
+values are nevertheless read from the approved card. `final_origin`,
+`export_origin` and `ocr_origin` distinguish these sources. Consult the separate
+field counts in `summary.json` and raw columns in `field-scores.csv`.
 
 Shared normalization trims/case-folds text, normalizes Unicode and whitespace,
 accepts numeric metres or `100 m`, and compares supported times by duration.

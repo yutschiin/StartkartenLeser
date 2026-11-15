@@ -282,8 +282,12 @@ def test_wettkampf_capture_autosave_approve_reopen_export(server):
     assert rows[0]["name"] == "'=formula"
     assert rows[0]["time_ms"] == "42180"
     assert rows[0]["female_mark"] == rows[0]["male_mark"] == "checked"
-    assert rows[0]["gender_key"] == "female"
-    assert rows[0]["csv_version"] == "1"
+    assert rows[0]["course"] == "75"
+    assert rows[0]["position"] == "Brust"
+    assert rows[0]["wk_number"] == "2"
+    assert rows[0]["csv_version"] == "2"
+    assert "wettkampf_id" not in rows[0]
+    assert "gender_key" not in rows[0]
     assert headers["Content-Disposition"] == (
         'attachment; filename="wettkampf-2-50m-ruecken-weiblich.csv"'
     )
@@ -303,6 +307,38 @@ def test_export_blocks_empty_and_drafts_and_editing_approved_card_revokes_approv
     })[1]
     assert saved["state"] == "needs_review"
     assert request(server, csv_path)[0] == 409
+
+
+def test_export_uses_approved_card_data_and_wettkampf_only_for_filename(server):
+    event = session(server, distance=50, stroke="ruecken", gender="female")
+    card = capture(server, event["id"])
+    saved = request(server, f"/api/cards/{card['id']}", "PATCH", {
+        "revision": card["revision"],
+        "fields": {
+            "wk_number": "8", "course": "100", "position": "Brust",
+            "name": "Card swimmer", "heat": "3", "lane": "4", "time": "1:02,34",
+        },
+        "checkboxes": {"female": "unchecked", "male": "checked"},
+    })[1]
+    request(server, f"/api/cards/{card['id']}/approve", "POST", {
+        "revision": saved["revision"],
+    })
+
+    status, data, headers = request(server, f"/api/sessions/{event['id']}/export")
+
+    assert status == 200
+    rows = list(csv.DictReader(io.StringIO(data.decode("utf-8-sig")), delimiter=";"))
+    assert len(rows) == 1
+    assert rows[0]["wk_number"] == "8"
+    assert rows[0]["course"] == "100"
+    assert rows[0]["position"] == "Brust"
+    assert rows[0]["female_mark"] == "unchecked"
+    assert rows[0]["male_mark"] == "checked"
+    assert rows[0]["name"] == "Card swimmer"
+    assert rows[0]["time_ms"] == "62340"
+    assert headers["Content-Disposition"] == (
+        'attachment; filename="wettkampf-2-50m-ruecken-weiblich.csv"'
+    )
 
 
 def test_capture_idempotency_survives_reload_and_rejects_reuse(server):

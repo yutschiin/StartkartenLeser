@@ -48,7 +48,7 @@ REQUIRED_CARD_FIELDS = ("name", "first_name", "year", "heat", "lane", "time")
 EXPORT_FIELDS = {
     "name": "name", "first_name": "first_name", "year": "year_text",
     "heat": "heat_text", "lane": "lane_text", "time": "time_text",
-    "course": "distance_m", "position": "stroke_key",
+    "course": "course", "position": "position",
 }
 
 
@@ -211,8 +211,7 @@ def score_card(reference: dict, detail: dict, evidence: dict, exported: dict | N
             "exported_value": export_value,
             "export_points": 100 if exported is not None and matches(field, reference[field], export_value, policy) else 0,
             "export_origin": (
-                "event_metadata" if field in {"course", "position"} else
-                "event_reference_marks" if field == "gender" else "card_field"
+                "card_marks" if field == "gender" else "card_field"
             ),
             "export_status": "exported" if exported is not None else "blocked",
             "raw_ocr": raw, "ocr_comparison_value": ocr,

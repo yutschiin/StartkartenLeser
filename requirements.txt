@@ -1,0 +1,3 @@
+# Install the app and its test dependencies into the virtual environment.
+-c requirements.lock
+-e .[dev]

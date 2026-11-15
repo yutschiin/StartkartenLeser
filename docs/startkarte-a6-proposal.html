@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Startkarte A6 – Entwurf</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #17252d;
+      background: #edf1f2;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 360px; }
+    .mock { min-height: 100vh; display: grid; grid-template-columns: minmax(270px, 360px) auto; align-items: center; justify-content: center; gap: 34px; padding: 28px; }
+    .notes { max-width: 340px; }
+    .notes h1 { margin: 0 0 8px; color: #143b55; font-size: 24px; }
+    .notes p { color: #52636c; font-size: 14px; line-height: 1.5; }
+    .notes ul { padding-left: 20px; color: #344852; font-size: 14px; line-height: 1.6; }
+    .draft { display: inline-block; margin-bottom: 12px; padding: 5px 9px; border-radius: 999px; color: #76500d; background: #fff0cc; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .print-button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 7px; color: #fff; background: #087c78; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .print-sheet { display: none; }
+
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 105mm;
+      height: 148mm;
+      overflow: hidden;
+      padding: 13mm 12mm 12mm;
+      border: .3mm solid #c9c5b9;
+      background: #fff;
+      box-shadow: 0 14px 40px rgb(25 42 51 / 18%);
+    }
+    .marker {
+      position: absolute;
+      z-index: 2;
+      width: 9mm;
+      height: 9mm;
+      padding: .6mm;
+      background: #fff;
+    }
+    .marker svg { display: block; width: 100%; height: 100%; }
+    .marker-tl { top: 3.5mm; left: 3.5mm; }
+    .marker-tr { top: 3.5mm; right: 3.5mm; }
+    .marker-bl { bottom: 3.5mm; left: 3.5mm; }
+    .marker-br { right: 3.5mm; bottom: 3.5mm; }
+
+    .heading { display: flex; align-items: end; justify-content: space-between; gap: 2mm; padding-bottom: 2.5mm; border-bottom: .45mm solid #203845; }
+    .heading strong { flex-shrink: 0; color: #344b55; font-size: 9pt; font-weight: 700; }
+    .heading span { color: #143b55; font-size: 12pt; letter-spacing: .04em; white-space: nowrap; }
+    .form { display: grid; flex: 1; min-height: 0; grid-template-rows: repeat(8, minmax(0, 1fr)); gap: 0; margin-top: 2.5mm; }
+    .field { min-width: 0; }
+    .field-label, .field-title { color: #344b55; font-size: 7.5pt; font-weight: 700; }
+    .line-field { display: flex; align-items: center; gap: 1.2mm; min-height: 0; height: 100%; }
+    .entry-line { flex: 1; min-width: 4mm; height: 6mm; border-bottom: .35mm solid #17252d; }
+    .row-full { min-height: 8mm; }
+    .row-pair { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 3mm; }
+    .year-gender { display: grid; grid-template-columns: 38mm minmax(0, 1fr); align-items: center; gap: 4mm; }
+    .gender-field { border: 0; margin: 0; padding: 0; text-align: right; }
+    .gender-options { display: flex; align-items: center; justify-content: flex-end; gap: 5mm; min-height: 6mm; }
+    .choice { display: inline-flex; align-items: center; gap: 1.3mm; white-space: nowrap; color: #344b55; font-size: 8pt; }
+    .choice-box { width: 3.5mm; height: 3.5mm; border: .55mm solid #17252d; background: #fff; }
+    .tsv-note { align-self: center; width: 100%; border-top: .35mm dashed #52636c; padding-top: .7mm; color: #52636c; font-size: 7.5pt; font-weight: 700; text-align: center; }
+    .footer { margin-top: 1mm; color: #6a777a; font-size: 6.5pt; text-align: center; }
+
+    @media (max-width: 760px) {
+      .mock { grid-template-columns: 1fr; justify-items: center; gap: 20px; padding: 18px 8px; }
+      .notes { max-width: 105mm; }
+      .card { transform-origin: top center; }
+    }
+    @media print {
+      @page { size: A4 portrait; margin: 4mm; }
+      :root, body { width: auto; height: auto; min-width: 0; margin: 0; background: #fff; }
+      .mock { display: none; }
+      .print-sheet {
+        display: grid;
+        width: 202mm;
+        height: 289mm;
+        grid-template-columns: repeat(2, 100mm);
+        grid-template-rows: repeat(2, 140.95mm);
+        gap: 2mm;
+        justify-content: center;
+        align-content: center;
+        margin: 0;
+      }
+      .print-copy { width: 100mm; height: 140.95mm; overflow: hidden; }
+      .print-copy > .card {
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+        transform: scale(.95238);
+        transform-origin: top left;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="mock">
+    <aside class="notes">
+      <span class="draft">Neuer Formatentwurf · noch nicht freigegeben</span>
+      <h1>Startkarte auf A6</h1>
+      <p>Ein einfacher, neu entworfener Vordruck. Die Felder folgen den bekannten Domain-Feldern; die bisherige Kartenoptik und ihre festen Crop-Koordinaten sind keine Voraussetzung.</p>
+      <ul>
+        <li>A6 Hochformat: 105 × 148&nbsp;mm.</li>
+        <li>Vier ArUco-Marker aus <code>DICT_4X4_50</code> (IDs 0–3) markieren die Ecken und geben Orientierung.</li>
+        <li>Strecke und Lage haben getrennte Schreibfelder.</li>
+        <li>Name, Vorname, Jahrgang, Geschlecht, Lauf, Bahn, erzielte Zeit und Zeitnehmer sind enthalten.</li>
+        <li>Klare schwarze Schreiblinien auf weißem Papier bleiben auch im Ausdruck gut erkennbar.</li>
+      </ul>
+      <p>Der Druckbogen enthält vier verkleinerte Karten auf einer A4-Seite. Im Druckdialog A4, Hochformat und 100&nbsp;% wählen; Kopf- und Fußzeilen ausschalten.</p>
+      <button class="print-button" type="button" onclick="window.print()">Vier Karten auf A4 drucken</button>
+      <p>Die Marker und Feldaufteilung sind ein Vorschlag zur gemeinsamen Prüfung. Der Entwurf ändert noch nicht die bestehende Erkennung.</p>
+    </aside>
+
+    <article class="card" aria-label="Druckvorschau einer Startkarte im A6-Format">
+      <div class="marker marker-tl" data-id="0" data-code="111111/101001/110101/111001/111011/111111"></div>
+      <div class="marker marker-tr" data-id="1" data-code="111111/111111/100001/101101/101011/111111"></div>
+      <div class="marker marker-bl" data-id="2" data-code="111111/111001/111001/111011/100101/111111"></div>
+      <div class="marker marker-br" data-id="3" data-code="111111/101101/101101/110111/110011/111111"></div>
+
+      <header class="heading">
+        <span>Pharmaphant-Schwimmfest</span>
+        <strong>STARTKARTE</strong>
+      </header>
+
+      <form class="form" aria-label="Startkartenfelder">
+        <div class="field line-field row-full">
+          <span class="field-label">Name:</span>
+          <div class="entry-line" id="name-line" aria-label="Schreibzeile Name"></div>
+        </div>
+        <div class="field line-field row-full">
+          <span class="field-label">Vorname:</span>
+          <div class="entry-line" id="first-name-line" aria-label="Schreibzeile Vorname"></div>
+        </div>
+
+        <div class="year-gender">
+          <div class="field line-field">
+            <span class="field-label">Jahrgang:</span>
+            <div class="entry-line" id="year-line" aria-label="Schreibzeile Jahrgang"></div>
+          </div>
+          <fieldset class="field gender-field">
+            <legend class="field-title">Geschlecht</legend>
+            <div class="gender-options">
+              <span class="choice"><span class="choice-box" aria-hidden="true"></span>Mädchen</span>
+              <span class="choice"><span class="choice-box" aria-hidden="true"></span>Junge</span>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="tsv-note">wird vom TSV ausgefüllt!</div>
+
+        <div class="row-pair">
+          <div class="field line-field">
+            <span class="field-label">Strecke:</span>
+            <div class="entry-line" id="course-line" aria-label="Schreibzeile Strecke"></div>
+          </div>
+          <div class="field line-field">
+            <span class="field-label">Lage:</span>
+            <div class="entry-line" id="position-line" aria-label="Schreibzeile Lage"></div>
+          </div>
+        </div>
+
+        <div class="row-pair">
+          <div class="field line-field">
+            <span class="field-label">Lauf:</span>
+            <div class="entry-line" id="heat-line" aria-label="Schreibzeile Lauf"></div>
+          </div>
+          <div class="field line-field">
+            <span class="field-label">Bahn:</span>
+            <div class="entry-line" id="lane-line" aria-label="Schreibzeile Bahn"></div>
+          </div>
+        </div>
+
+        <div class="field line-field row-full">
+          <span class="field-label">Erzielte Zeit:</span>
+          <div class="entry-line" id="time-line" aria-label="Schreibzeile erzielte Zeit"></div>
+        </div>
+        <div class="field line-field row-full">
+          <span class="field-label">Zeitnehmer:</span>
+          <div class="entry-line" id="timekeeper-line" aria-label="Schreibzeile Zeitnehmer"></div>
+        </div>
+      </form>
+      <div class="footer">Bitte gut lesbar in die vorgesehenen Felder schreiben.</div>
+    </article>
+  </main>
+  <section class="print-sheet" aria-hidden="true"></section>
+
+  <script>
+    // Static ArUco 4x4 markers (DICT_4X4_50 IDs 0–3); no image/CV library is loaded.
+    const svgNS = "http://www.w3.org/2000/svg";
+    document.querySelectorAll(".marker").forEach(marker => {
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", "0 0 6 6");
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", `ArUco-Marker ${marker.dataset.id}`);
+      marker.dataset.code.split("/").forEach((row, y) => {
+        [...row].forEach((pixel, x) => {
+          if (pixel !== "1") return;
+          const cell = document.createElementNS(svgNS, "rect");
+          cell.setAttribute("x", x);
+          cell.setAttribute("y", y);
+          cell.setAttribute("width", 1);
+          cell.setAttribute("height", 1);
+          cell.setAttribute("fill", "#111");
+          svg.append(cell);
+        });
+      });
+      marker.append(svg);
+    });
+
+    const printSheet = document.querySelector(".print-sheet");
+    const card = document.querySelector(".card");
+    for (let index = 0; index < 4; index += 1) {
+      const copy = document.createElement("div");
+      copy.className = "print-copy";
+      const duplicate = card.cloneNode(true);
+      duplicate.removeAttribute("aria-label");
+      duplicate.querySelectorAll("[id]").forEach(element => element.removeAttribute("id"));
+      copy.append(duplicate);
+      printSheet.append(copy);
+    }
+  </script>
+</body>
+</html>

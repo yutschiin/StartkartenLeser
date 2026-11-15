@@ -1,0 +1,12 @@
+include requirements.txt requirements.lock setup.sh
+recursive-include scripts *.py
+include frontend/package.json frontend/package-lock.json frontend/index.html
+include frontend/tsconfig*.json frontend/vite.config.*
+recursive-include frontend/src *.ts *.tsx *.css
+recursive-include frontend/tests *.ts *.tsx *.mjs
+recursive-include frontend/scripts *.mjs
+recursive-include docs *.md *.html *.jpg *.pdf
+include tests/reference_data.csv
+recursive-include tests *.py
+recursive-include tests/testfotos *.jpg
+prune frontend/node_modules

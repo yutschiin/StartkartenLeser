@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "startkartenleser-desktop"
+version = "0.1.0"
+description = "Local desktop application for reviewing Startkarten"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = [
+    "Pillow==13.0.0",
+    "numpy==2.5.4",
+    "opencv-python-headless==4.14.0.94",
+    "onnxruntime==1.31.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.2.0",
+]
+forms = [
+    "reportlab==5.1.0",
+]
+
+[project.scripts]
+startkartenleser = "startkartenleser.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+startkartenleser = ["assets/*.md", "assets/*.txt", "assets/*.json", "assets/models/de-htr-v2/*", "locales/*.json", "web_static/*", "web_static/assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

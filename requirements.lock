@@ -1,0 +1,15 @@
+# Exact resolver versions used for the Python 3.14 Linux setup gate.
+# Direct application dependencies are also pinned in pyproject.toml.
+flatbuffers==25.12.19
+iniconfig==2.3.1
+pip==26.3
+numpy==2.5.4
+onnxruntime==1.31.1
+opencv-python-headless==4.14.0.94
+packaging==26.3
+Pillow==13.0.0
+pluggy==1.7.0
+protobuf==7.36.2
+Pygments==2.21.0
+pytest==9.2.0
+setuptools==84.2.1

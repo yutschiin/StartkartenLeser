@@ -1,0 +1,10 @@
+{
+  "positions": {
+    "Freistil": ["F", "Frei", "K", "Kraul"],
+    "Rücken": ["R", "Ruecken"],
+    "Brust": ["B"],
+    "Schmetterling": ["S", "D", "Delphin"]
+  },
+  "max_edit_distance": 1,
+  "minimum_birth_year": 1927
+}

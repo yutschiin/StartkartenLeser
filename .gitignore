@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.coverage
+/docs/Starkarte_Ina.jpg
+/docs/Startkarte_Eugen.jpg
+/frontend/node_modules/
+/frontend/coverage/
+
+# Evaluation output contains generated CSVs, copied photos, databases, and reports.
+# Keep run artifacts local; only reviewed reference photos belong in the repository.
+/tests/results/
+
+# Unreviewed camera captures and local demo exports are not source fixtures.
+# Only add photo sets to version control after confirming permission and scrubbing.
+/tests/new-card-photos-*/
+/tests/wettkampf-1.csv
